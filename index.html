@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Faculty Summary</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f4f4f9;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    label {
+      font-weight: bold;
+    }
+    input, select, button {
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    #result {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #fff;
+      border-radius: 5px;
+    }
+    ul {
+      padding-left: 20px;
+    }
+    li {
+      margin-bottom: 5px;
+    }
+    a {
+      color: #3498db;
+    }
+  </style>
+  <script>
+    async function loadFaculties() {
+      const searchKeyword = document.getElementById('searchInput').value.trim();
+      try {
+        const res = await fetch(`http://127.0.0.1:5000/list_faculties?search=${encodeURIComponent(searchKeyword)}`);
+        const data = await res.json();
+        const dropdown = document.getElementById('facultyDropdown');
+
+        if (data.faculty_names?.length > 0) {
+          dropdown.innerHTML = data.faculty_names.map(name =>
+            `<option value="${name}">${name}</option>`
+          ).join('');
+        } else {
+          dropdown.innerHTML = '<option>No faculties found</option>';
+        }
+      } catch (err) {
+        console.error("Error loading faculties:", err);
+      }
+    }
+
+    async function generateSummary() {
+      const facultyName = document.getElementById('facultyDropdown').value;
+      try {
+        const res = await fetch('http://127.0.0.1:5000/generate_summary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ faculty_name: facultyName })
+        });
+        const data = await res.json();
+        const resultDiv = document.getElementById('result');
+
+        if (data.error) {
+          resultDiv.innerHTML = `<p><strong>Error:</strong> ${data.error}</p>`;
+        } else {
+          resultDiv.innerHTML = `
+            <h3>${data.exact_name}</h3>
+            <p><strong>Affiliation:</strong> ${data.affiliation}</p>
+            <p><strong>Total Citations:</strong> ${data.total_citations}</p>
+            <h4>Recent Publications:</h4>
+            <ul>
+              ${data.publications.map(pub => `
+                <li><strong>${pub.Title}</strong> (${pub.Year}) – Citations: ${pub.Citations}</li>
+              `).join('')}
+            </ul>
+            <p><strong>Google Scholar Profile:</strong> <a href="${data.profile_link}" target="_blank">${data.profile_link}</a></p>
+          `;
+        }
+      } catch (err) {
+        console.error("Error generating summary:", err);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadFaculties);
+  </script>
+</head>
+<body>
+  <h1>Faculty Summary Generator</h1>
+  <label for="searchInput">Search Faculty:</label>
+  <input type="text" id="searchInput" placeholder="Enter name or keyword" oninput="loadFaculties()" />
+  <br>
+  <label for="facultyDropdown">Select Faculty:</label>
+  <select id="facultyDropdown"></select>
+  <button onclick="generateSummary()">Generate Summary</button>
+  <div id="result"></div>
+</body>
+</html>
